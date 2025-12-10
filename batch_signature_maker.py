@@ -31,6 +31,10 @@ def load_owners(json_file):
     return data, owners, unique_addresses
 
 
+def to_fixed_32bytes_hex(value: int) -> str:
+    return "0x" + value.to_bytes(32, "big").hex()
+
+
 def sign_for_address(chainid, contract, account_address, private_key):
     """
     Returns a dict with r, s, v for a single address, or raises on error.
@@ -53,8 +57,8 @@ def sign_for_address(chainid, contract, account_address, private_key):
 
     # Return in JSON-friendly format
     return {
-        "r": hex(signed.r),
-        "s": hex(signed.s),
+        "r": to_fixed_32bytes_hex(signed.r),
+        "s": to_fixed_32bytes_hex(signed.s),
         "v": signed.v,
         # "signature": signed.signature.hex(),  # if you want full sig
     }
