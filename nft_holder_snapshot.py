@@ -2,6 +2,7 @@ import json
 import argparse
 from web3 import Web3
 from eth_utils import to_checksum_address
+import sys
 
 # Contract addresses by network
 CONTRACT_ADDRESSES = {
@@ -32,6 +33,8 @@ def parse_args():
     parser.add_argument('--block', type=int, required=True)
     parser.add_argument('--network', type=str, default='mainnet', choices=['testnet', 'mainnet'])
     parser.add_argument('--rpc', type=str, default='https://eth.llamarpc.com')
+    parser.add_argument('--test-rpcs', type=str, default='https://ethereum-rpc.publicnode.com https://gateway.tenderly.co/public/mainnet')
+    parser.add_argument('--test-mode', action='store_true', default=False)
     return parser.parse_args()
 
 
@@ -78,11 +81,41 @@ def save_results(block, owners):
         json.dump({"block": block, "owners": owners}, f, indent=2)
     return filename
 
+def perform_test(block, network, test_rpcs):
+    rpcs = test_rpcs.split(" ")
+    print(f"Performing test with {len(rpcs)} RPCs")
+    
+    if len(rpcs) < 2:
+        print("Need at least 2 RPCs to perform test")
+        return 1
+    
+    data = []
+    max_token_id = 0
+    for i, rpc in enumerate(rpcs):
+        w3 = init_web3(rpc)
+        contract, _, max_token_id = get_contract(w3, network)
+        data.append({"w3": w3, "contract": contract})
+
+    for i in range(1, max_token_id + 1):
+        owner = fetch_owner(data[0]["contract"], i, block)
+        for j in range(1, len(rpcs)):
+            owner_j = fetch_owner(data[j]["contract"], i, block)
+            if owner != owner_j:
+                print(f"TokenId {i}: owner mismatch between RPCs {0} and {j}")
+                print(f"RPC {0} owner: {owner}")
+                print(f"RPC {j} owner: {owner_j}")
+                return 1
+        print(f"TokenId {i}: owner matched between all RPCs")
+    return 0
 
 def main():
     args = parse_args()
     block = args.block
     network = args.network.lower()
+    
+    if args.test_mode:
+        print("Running in test mode")
+        return perform_test(block, network, args.test_rpcs)
 
     w3 = init_web3(args.rpc)
     contract, address, max_token_id = get_contract(w3, network)
@@ -95,7 +128,9 @@ def main():
 
     print(f"\nSaved results to {output_file}")
     print(f"Total tokens found: {len(owners)}")
+    
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
