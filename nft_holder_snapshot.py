@@ -96,8 +96,11 @@ def perform_test(block, network, test_rpcs):
         contract, _, max_token_id = get_contract(w3, network)
         data.append({"w3": w3, "contract": contract})
 
+    any_valid = False
     for i in range(1, max_token_id + 1):
         owner = fetch_owner(data[0]["contract"], i, block)
+        if owner:
+            any_valid = True
         for j in range(1, len(rpcs)):
             owner_j = fetch_owner(data[j]["contract"], i, block)
             if owner != owner_j:
@@ -106,6 +109,10 @@ def perform_test(block, network, test_rpcs):
                 print(f"RPC {j} owner: {owner_j}")
                 return 1
         print(f"TokenId {i}: owner matched between all RPCs")
+    
+    if not any_valid:
+        print("No valid owners found")
+        return 1
     return 0
 
 def main():

@@ -1,0 +1,41 @@
+name: Test Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Run NFT Holder Snapshot in Test Mode
+      run: |
+        python3 nft_holder_snapshot.py \
+          --test-mode \
+          --block 23985000 \
+          --network mainnet
+        
+    - name: Run Batch Signature Verifier in Test Mode
+      run: |
+        python3 batch_signature_verifier.py \
+          --json-file snapshot_and_signatures/mainnet/snapshot_and_signatures.json \
+          --signer 0x93bc9f95366e3Cc1429B818b5820e0204636c25b \
+          --verbose
+
